@@ -10,7 +10,7 @@ homepage = "https://github.com/soaprs/soap-sqlx"
 readme = "README.md"
 keywords = ["clean-architecture", "ddd", "repository-pattern", "postgresql", "sqlx"]
 categories = ["database", "development-tools"]
-publish = false
+publish = true
 
 [features]
 default = ["postgres", "runtime-tokio-rustls"]
