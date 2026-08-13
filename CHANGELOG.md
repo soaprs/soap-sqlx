@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-13
+
 ### Added
 
 - Native PostgreSQL persistence values for UUID, JSONB, decimal, date, time,
@@ -52,5 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI quality gates for formatting, Clippy, documentation, Rust 1.94 MSRV, and a
   PostgreSQL service.
 
-[Unreleased]: https://github.com/soaprs/soap-sqlx/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/soaprs/soap-sqlx/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/soaprs/soap-sqlx/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/soaprs/soap-sqlx/releases/tag/v0.1.0
