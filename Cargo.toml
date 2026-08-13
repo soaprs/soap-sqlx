@@ -5,8 +5,8 @@ edition = "2024"
 rust-version = "1.94"
 description = "SQLx database adapters for soaprs"
 license = "MIT"
-repository = "https://github.com/soaprs/soaprs-sqlx"
-homepage = "https://github.com/soaprs/soaprs-sqlx"
+repository = "https://github.com/soaprs/soap-sqlx"
+homepage = "https://github.com/soaprs/soap-sqlx"
 readme = "README.md"
 keywords = ["clean-architecture", "ddd", "repository-pattern", "postgresql", "sqlx"]
 categories = ["database", "development-tools"]
@@ -23,6 +23,7 @@ soaprs-repository = "0.1.0"
 sqlx = { version = "0.9.0", default-features = false }
 
 [dev-dependencies]
+soaprs-contract-tests = "0.1.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [lints.rust]

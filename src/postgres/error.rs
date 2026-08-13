@@ -65,7 +65,8 @@ fn map_database_error(database: &dyn DatabaseError, operation: &'static str) -> 
             SoapError::infrastructure(format!("{operation} violates the persisted schema"))
                 .with_transience(ErrorTransience::Permanent)
         }
-        _ => SoapError::infrastructure(format!("{operation} failed in PostgreSQL")),
+        _ => SoapError::infrastructure(format!("{operation} failed in PostgreSQL"))
+            .with_transience(ErrorTransience::Permanent),
     }
 }
 
@@ -137,6 +138,19 @@ mod tests {
             assert_eq!(error.kind(), SoapErrorKind::Infrastructure);
             assert_eq!(error.transience(), ErrorTransience::Transient);
         }
+    }
+
+    #[test]
+    fn marks_unrecognized_database_failures_as_permanent() {
+        let error = Error::Database(Box::new(MockDatabaseError {
+            kind: MockErrorKind::Other,
+            code: "42703",
+        }));
+        let error = map_sqlx_error(error, "find users");
+
+        assert_eq!(error.kind(), SoapErrorKind::Infrastructure);
+        assert_eq!(error.transience(), ErrorTransience::Permanent);
+        assert!(error.source().is_some());
     }
 
     #[derive(Debug)]

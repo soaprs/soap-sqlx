@@ -855,6 +855,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "soaprs-contract-tests"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6cf1908c4e9627bcb1cbde17278408b24d8df396d3db290a6f6c08030c06035d"
+dependencies = [
+ "soaprs-core",
+ "soaprs-repository",
+]
+
+[[package]]
 name = "soaprs-core"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -873,6 +883,7 @@ dependencies = [
 name = "soaprs-sqlx"
 version = "0.1.0"
 dependencies = [
+ "soaprs-contract-tests",
  "soaprs-core",
  "soaprs-repository",
  "sqlx",

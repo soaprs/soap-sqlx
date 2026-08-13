@@ -93,6 +93,10 @@ impl PgFieldMap {
             SoapError::validation(format!("unknown logical field `{logical}` for PostgreSQL"))
         })
     }
+
+    pub(crate) fn contains(&self, logical: &FieldName) -> bool {
+        self.columns.contains_key(logical)
+    }
 }
 
 #[cfg(test)]

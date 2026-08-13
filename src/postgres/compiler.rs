@@ -21,6 +21,8 @@ pub enum PgBindValue {
     Bytes(Vec<u8>),
     /// Signed integer used for pagination.
     I64(i64),
+    /// Typed SQL null binding.
+    Null(PgScalarKind),
 }
 
 /// SQL fragment plus ordered typed bindings produced by the compiler.
@@ -31,6 +33,13 @@ pub struct PgCompiledQuery {
 }
 
 impl PgCompiledQuery {
+    pub(crate) const fn from_bindings(bindings: Vec<PgBindValue>) -> Self {
+        Self {
+            sql: String::new(),
+            bindings,
+        }
+    }
+
     /// Returns the compiled SQL fragment.
     pub fn sql(&self) -> &str {
         &self.sql
@@ -58,6 +67,11 @@ impl PgCompiledQuery {
                 PgBindValue::Numeric(value) | PgBindValue::Text(value) => arguments.add(value),
                 PgBindValue::Bytes(value) => arguments.add(value),
                 PgBindValue::I64(value) => arguments.add(value),
+                PgBindValue::Null(PgScalarKind::Bool) => arguments.add(Option::<bool>::None),
+                PgBindValue::Null(PgScalarKind::Numeric | PgScalarKind::Text) => {
+                    arguments.add(Option::<String>::None)
+                }
+                PgBindValue::Null(PgScalarKind::Bytes) => arguments.add(Option::<Vec<u8>>::None),
             };
             result.map_err(|source| {
                 SoapError::infrastructure("failed to encode a PostgreSQL query binding")
@@ -322,7 +336,10 @@ fn column_expression(column: &PgColumn) -> String {
     }
 }
 
-fn normalize_binding(kind: PgScalarKind, value: &ScalarValue) -> SoapResult<PgBindValue> {
+pub(crate) fn normalize_binding(
+    kind: PgScalarKind,
+    value: &ScalarValue,
+) -> SoapResult<PgBindValue> {
     value.validate()?;
     match (kind, value) {
         (PgScalarKind::Bool, ScalarValue::Bool(value)) => Ok(PgBindValue::Bool(*value)),
@@ -346,6 +363,17 @@ fn normalize_binding(kind: PgScalarKind, value: &ScalarValue) -> SoapResult<PgBi
         _ => Err(SoapError::validation(
             "query value is incompatible with the mapped PostgreSQL column",
         )),
+    }
+}
+
+pub(crate) fn normalize_entity_binding(
+    kind: PgScalarKind,
+    value: &ScalarValue,
+) -> SoapResult<PgBindValue> {
+    if matches!(value, ScalarValue::Null) {
+        Ok(PgBindValue::Null(kind))
+    } else {
+        normalize_binding(kind, value)
     }
 }
 

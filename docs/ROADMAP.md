@@ -2,6 +2,8 @@
 
 ## M0 — PostgreSQL compiler foundation
 
+Status: implemented; PostgreSQL execution is verified by CI.
+
 - PostgreSQL identifier and logical-field mapping
 - portable condition, sorting, and pagination compilation
 - typed bindings and SQL injection boundary
@@ -10,13 +12,18 @@
 
 ## M1 — repository adapter
 
+Status: implemented; publication waits for a green real-PostgreSQL CI run.
+
 - explicit entity row codec contract
+- pool-independent `PgSource` execution boundary
 - `ReadRepository`: `get`, `find`, and `count`
 - `WriteRepository`: `insert`, `replace`, and `remove`
 - complete `soaprs-contract-tests` conformance on PostgreSQL
 - unique, foreign-key, timeout, and mapping error integration tests
 
 ## M2 — native queries and transactions
+
+Status: next.
 
 - infrastructure-owned native named-query handlers
 - transaction prototype without changing `soaprs-core` prematurely
