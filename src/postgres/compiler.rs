@@ -6,7 +6,13 @@ use soaprs_repository::{
 };
 use sqlx::{Arguments, postgres::PgArguments};
 
-use super::{PgColumn, PgFieldMap, PgScalarKind};
+#[cfg(feature = "postgres-types")]
+use sqlx::types::{
+    Decimal, Json, JsonValue, Uuid,
+    chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc},
+};
+
+use super::{PgColumn, PgFieldMap, PgScalarKind, PgValue};
 
 /// Typed value bound to a compiled PostgreSQL query.
 #[derive(Debug, Clone, PartialEq)]
@@ -19,6 +25,27 @@ pub enum PgBindValue {
     Text(String),
     /// Binary `bytea` binding.
     Bytes(Vec<u8>),
+    /// Native PostgreSQL UUID binding.
+    #[cfg(feature = "postgres-types")]
+    Uuid(Uuid),
+    /// Native PostgreSQL `jsonb` binding.
+    #[cfg(feature = "postgres-types")]
+    Json(JsonValue),
+    /// Native PostgreSQL arbitrary-precision numeric binding.
+    #[cfg(feature = "postgres-types")]
+    Decimal(Decimal),
+    /// Native PostgreSQL date binding.
+    #[cfg(feature = "postgres-types")]
+    Date(NaiveDate),
+    /// Native PostgreSQL time binding.
+    #[cfg(feature = "postgres-types")]
+    Time(NaiveTime),
+    /// Native PostgreSQL timestamp binding.
+    #[cfg(feature = "postgres-types")]
+    Timestamp(NaiveDateTime),
+    /// Native PostgreSQL timestamp-with-time-zone binding.
+    #[cfg(feature = "postgres-types")]
+    TimestampTz(DateTime<Utc>),
     /// Signed integer used for pagination.
     I64(i64),
     /// Typed SQL null binding.
@@ -66,12 +93,34 @@ impl PgCompiledQuery {
                 PgBindValue::Bool(value) => arguments.add(value),
                 PgBindValue::Numeric(value) | PgBindValue::Text(value) => arguments.add(value),
                 PgBindValue::Bytes(value) => arguments.add(value),
+                #[cfg(feature = "postgres-types")]
+                PgBindValue::Uuid(value) => arguments.add(value),
+                #[cfg(feature = "postgres-types")]
+                PgBindValue::Json(value) => arguments.add(Json(value)),
+                #[cfg(feature = "postgres-types")]
+                PgBindValue::Decimal(value) => arguments.add(value),
+                #[cfg(feature = "postgres-types")]
+                PgBindValue::Date(value) => arguments.add(value),
+                #[cfg(feature = "postgres-types")]
+                PgBindValue::Time(value) => arguments.add(value),
+                #[cfg(feature = "postgres-types")]
+                PgBindValue::Timestamp(value) => arguments.add(value),
+                #[cfg(feature = "postgres-types")]
+                PgBindValue::TimestampTz(value) => arguments.add(value),
                 PgBindValue::I64(value) => arguments.add(value),
                 PgBindValue::Null(PgScalarKind::Bool) => arguments.add(Option::<bool>::None),
                 PgBindValue::Null(PgScalarKind::Numeric | PgScalarKind::Text) => {
                     arguments.add(Option::<String>::None)
                 }
                 PgBindValue::Null(PgScalarKind::Bytes) => arguments.add(Option::<Vec<u8>>::None),
+                PgBindValue::Null(
+                    PgScalarKind::Uuid
+                    | PgScalarKind::Json
+                    | PgScalarKind::Date
+                    | PgScalarKind::Time
+                    | PgScalarKind::Timestamp
+                    | PgScalarKind::TimestampTz,
+                ) => arguments.add(Option::<String>::None),
             };
             result.map_err(|source| {
                 SoapError::infrastructure("failed to encode a PostgreSQL query binding")
@@ -159,7 +208,7 @@ impl PgQueryCompiler {
             output.sql.push_str("LIMIT ");
             let limit = i64::try_from(limit)
                 .map_err(|_| SoapError::validation("PostgreSQL limit exceeds BIGINT range"))?;
-            output.push_binding(PgBindValue::I64(limit), false);
+            output.push_binding(PgBindValue::I64(limit), None);
         }
 
         if params.offset > 0 {
@@ -167,7 +216,7 @@ impl PgQueryCompiler {
             output.sql.push_str("OFFSET ");
             let offset = i64::try_from(params.offset)
                 .map_err(|_| SoapError::validation("PostgreSQL offset exceeds BIGINT range"))?;
-            output.push_binding(PgBindValue::I64(offset), false);
+            output.push_binding(PgBindValue::I64(offset), None);
         }
 
         Ok(output.finish())
@@ -229,6 +278,11 @@ impl PgQueryCompiler {
         value: Option<&ScalarValue>,
         output: &mut CompilerOutput,
     ) -> SoapResult<()> {
+        if operator == Operator::Like && column.scalar_kind() != PgScalarKind::Text {
+            return Err(SoapError::validation(
+                "LIKE requires a PostgreSQL text column",
+            ));
+        }
         let expression = column_expression(column);
         match operator {
             Operator::IsNull => {
@@ -266,7 +320,7 @@ impl PgQueryCompiler {
                         output.sql.push_str(", ");
                     }
                     let binding = normalize_binding(column.scalar_kind(), value)?;
-                    output.push_binding(binding, column.scalar_kind() == PgScalarKind::Numeric);
+                    output.push_binding(binding, placeholder_cast(column.scalar_kind()));
                 }
                 output.sql.push(')');
                 Ok(())
@@ -293,7 +347,7 @@ impl PgQueryCompiler {
                         ));
                     }
                 });
-                output.push_binding(binding, column.scalar_kind() == PgScalarKind::Numeric);
+                output.push_binding(binding, placeholder_cast(column.scalar_kind()));
                 if operator == Operator::Like {
                     output.sql.push_str(" ESCAPE ''");
                 }
@@ -310,12 +364,13 @@ struct CompilerOutput {
 }
 
 impl CompilerOutput {
-    fn push_binding(&mut self, binding: PgBindValue, numeric_cast: bool) {
+    fn push_binding(&mut self, binding: PgBindValue, cast: Option<&'static str>) {
         self.bindings.push(binding);
         self.sql.push('$');
         self.sql.push_str(&self.bindings.len().to_string());
-        if numeric_cast {
-            self.sql.push_str("::numeric");
+        if let Some(cast) = cast {
+            self.sql.push_str("::");
+            self.sql.push_str(cast);
         }
     }
 
@@ -327,12 +382,19 @@ impl CompilerOutput {
     }
 }
 
-fn column_expression(column: &PgColumn) -> String {
+pub(crate) fn column_expression(column: &PgColumn) -> String {
     let identifier = column.identifier().quoted();
     match column.scalar_kind() {
         PgScalarKind::Numeric => format!("{identifier}::numeric"),
         PgScalarKind::Text => format!("{identifier} COLLATE \"C\""),
-        PgScalarKind::Bool | PgScalarKind::Bytes => identifier,
+        PgScalarKind::Bool
+        | PgScalarKind::Bytes
+        | PgScalarKind::Uuid
+        | PgScalarKind::Json
+        | PgScalarKind::Date
+        | PgScalarKind::Time
+        | PgScalarKind::Timestamp
+        | PgScalarKind::TimestampTz => identifier,
     }
 }
 
@@ -354,6 +416,15 @@ pub(crate) fn normalize_binding(
         }
         (PgScalarKind::Text, ScalarValue::String(value)) => Ok(PgBindValue::Text(value.clone())),
         (PgScalarKind::Bytes, ScalarValue::Bytes(value)) => Ok(PgBindValue::Bytes(value.clone())),
+        (
+            PgScalarKind::Uuid
+            | PgScalarKind::Json
+            | PgScalarKind::Date
+            | PgScalarKind::Time
+            | PgScalarKind::Timestamp
+            | PgScalarKind::TimestampTz,
+            ScalarValue::String(value),
+        ) => Ok(PgBindValue::Text(value.clone())),
         (_, ScalarValue::Null) => Err(SoapError::validation(
             "use IS NULL or IS NOT NULL for PostgreSQL null values",
         )),
@@ -368,12 +439,52 @@ pub(crate) fn normalize_binding(
 
 pub(crate) fn normalize_entity_binding(
     kind: PgScalarKind,
-    value: &ScalarValue,
+    value: &PgValue,
 ) -> SoapResult<PgBindValue> {
-    if matches!(value, ScalarValue::Null) {
-        Ok(PgBindValue::Null(kind))
-    } else {
-        normalize_binding(kind, value)
+    value.validate()?;
+    match (kind, value) {
+        (_, PgValue::Null) => Ok(PgBindValue::Null(kind)),
+        (_, PgValue::Default) => Err(SoapError::infrastructure(
+            "PostgreSQL DEFAULT cannot be encoded as a query binding",
+        )),
+        (PgScalarKind::Bool, PgValue::Bool(value)) => Ok(PgBindValue::Bool(*value)),
+        (PgScalarKind::Numeric, PgValue::I64(value)) => Ok(PgBindValue::Numeric(value.to_string())),
+        (PgScalarKind::Numeric, PgValue::U64(value)) => Ok(PgBindValue::Numeric(value.to_string())),
+        (PgScalarKind::Numeric, PgValue::F64(value)) => Ok(PgBindValue::Numeric(value.to_string())),
+        (PgScalarKind::Text, PgValue::Text(value)) => Ok(PgBindValue::Text(value.clone())),
+        (PgScalarKind::Bytes, PgValue::Bytes(value)) => Ok(PgBindValue::Bytes(value.clone())),
+        #[cfg(feature = "postgres-types")]
+        (PgScalarKind::Uuid, PgValue::Uuid(value)) => Ok(PgBindValue::Uuid(*value)),
+        #[cfg(feature = "postgres-types")]
+        (PgScalarKind::Json, PgValue::Json(value)) => Ok(PgBindValue::Json(value.clone())),
+        #[cfg(feature = "postgres-types")]
+        (PgScalarKind::Numeric, PgValue::Decimal(value)) => Ok(PgBindValue::Decimal(*value)),
+        #[cfg(feature = "postgres-types")]
+        (PgScalarKind::Date, PgValue::Date(value)) => Ok(PgBindValue::Date(*value)),
+        #[cfg(feature = "postgres-types")]
+        (PgScalarKind::Time, PgValue::Time(value)) => Ok(PgBindValue::Time(*value)),
+        #[cfg(feature = "postgres-types")]
+        (PgScalarKind::Timestamp, PgValue::Timestamp(value)) => Ok(PgBindValue::Timestamp(*value)),
+        #[cfg(feature = "postgres-types")]
+        (PgScalarKind::TimestampTz, PgValue::TimestampTz(value)) => {
+            Ok(PgBindValue::TimestampTz(*value))
+        }
+        _ => Err(SoapError::validation(
+            "persistence value is incompatible with the mapped PostgreSQL column",
+        )),
+    }
+}
+
+pub(crate) const fn placeholder_cast(kind: PgScalarKind) -> Option<&'static str> {
+    match kind {
+        PgScalarKind::Bool | PgScalarKind::Text | PgScalarKind::Bytes => None,
+        PgScalarKind::Numeric => Some("numeric"),
+        PgScalarKind::Uuid => Some("uuid"),
+        PgScalarKind::Json => Some("jsonb"),
+        PgScalarKind::Date => Some("date"),
+        PgScalarKind::Time => Some("time"),
+        PgScalarKind::Timestamp => Some("timestamp"),
+        PgScalarKind::TimestampTz => Some("timestamptz"),
     }
 }
 
@@ -514,6 +625,30 @@ mod tests {
         );
         assert_eq!(
             incompatible.as_ref().map_err(|error| error.kind()),
+            Err(SoapErrorKind::Validation)
+        );
+    }
+
+    #[test]
+    fn casts_portable_strings_for_native_columns_and_rejects_like() {
+        let fields = PgFieldMap::new().with("id", "id", PgScalarKind::Uuid);
+        let compiler = match fields {
+            Ok(fields) => PgQueryCompiler::new(fields),
+            Err(error) => panic!("valid UUID mapping failed: {error}"),
+        };
+        let equality = Where::field("id")
+            .map(|field| field.eq("67e55044-10b1-426f-9247-bb680e5fe0c8").build())
+            .and_then(|condition| compiler.compile_condition(&condition));
+        let like = Where::field("id")
+            .map(|field| field.like("67e5%").build())
+            .and_then(|condition| compiler.compile_condition(&condition));
+
+        assert_eq!(
+            equality.ok().map(|statement| statement.sql().to_owned()),
+            Some(r#""id" = $1::uuid"#.into())
+        );
+        assert_eq!(
+            like.as_ref().map_err(|error| error.kind()),
             Err(SoapErrorKind::Validation)
         );
     }

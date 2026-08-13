@@ -35,6 +35,10 @@ pub trait PgSource: Send + Sync {
         sql: String,
         arguments: PgArguments,
     ) -> BoxFuture<'_, Result<PgQueryResult, Error>>;
+
+    /// Applies a write statement and fetches its single `RETURNING` row.
+    fn apply_one(&self, sql: String, arguments: PgArguments)
+    -> BoxFuture<'_, Result<PgRow, Error>>;
 }
 
 /// [`PgSource`] backed by a SQLx PostgreSQL connection pool.
@@ -100,6 +104,18 @@ impl PgSource for PgPoolSource {
         Box::pin(async move {
             sqlx::query_with::<Postgres, _>(AssertSqlSafe(sql), arguments)
                 .execute(&self.pool)
+                .await
+        })
+    }
+
+    fn apply_one(
+        &self,
+        sql: String,
+        arguments: PgArguments,
+    ) -> BoxFuture<'_, Result<PgRow, Error>> {
+        Box::pin(async move {
+            sqlx::query_with::<Postgres, _>(AssertSqlSafe(sql), arguments)
+                .fetch_one(&self.pool)
                 .await
         })
     }

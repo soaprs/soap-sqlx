@@ -22,6 +22,7 @@ pub fn map_sqlx_error(error: Error, operation: &'static str) -> SoapError {
         }
         Error::Database(database) => map_database_error(database.as_ref(), operation),
         Error::Configuration(_)
+        | Error::Protocol(_)
         | Error::ColumnDecode { .. }
         | Error::ColumnIndexOutOfBounds { .. }
         | Error::ColumnNotFound(_)

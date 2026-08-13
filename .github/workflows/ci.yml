@@ -29,6 +29,7 @@ jobs:
       - run: cargo clippy --all-targets --all-features --locked -- -D warnings
       - run: cargo test --all-targets --all-features --locked
       - run: cargo check --no-default-features --locked
+      - run: cargo check --no-default-features --features postgres --locked
       - run: cargo doc --no-deps --all-features --locked
         env:
           RUSTDOCFLAGS: -D warnings

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Native PostgreSQL persistence values for UUID, JSONB, decimal, date, time,
+  timestamp, and timestamp-with-time-zone columns.
+- Schema-qualified entity tables and explicit selectable, insertable, and
+  updatable field permissions.
+- SQL `DEFAULT`, generated-field mappings, and `insert_returning` plus
+  `replace_returning` operations.
+- `PgTransactionSource` for sharing one transaction across repositories and
+  native handlers.
+- `PgPrimaryReplicaSource` with round-robin reads and primary-only writes.
+- `PgNativeQueryHandler`, `PgNativeQuerySpec`, and trusted static native
+  statements for infrastructure-owned joins, CTEs, aggregates, and projections.
+- Integration coverage for native types, defaults, returned rows, transactions,
+  and native named queries.
+
+### Changed
+
+- `PgEntityCodec` now returns PostgreSQL-specific `PgValue` objects instead of
+  portable `ScalarValue` objects for persistence. Portable filters still use
+  `ScalarValue`. This is a breaking API change planned for `0.2.0`.
+- `PgSource` distinguishes writes returning rows through `apply_one`, preserving
+  correct primary/replica routing intent.
+
 ## [0.1.0] - 2026-08-13
 
 ### Added

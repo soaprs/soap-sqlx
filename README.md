@@ -5,7 +5,8 @@
 and SQL text in infrastructure while application code depends on soaprs ports
 and named queries.
 
-The project is an early prototype and is not published yet.
+The crate is published on crates.io. The `main` branch currently develops the
+breaking `0.2` PostgreSQL API after the initial `0.1` release.
 
 ## Current scope
 
@@ -17,11 +18,13 @@ The project is an early prototype and is not published yet.
 - adapter-owned entity mappings and row codecs,
 - generic PostgreSQL `ReadRepository` and `WriteRepository`,
 - swappable `PgSource` execution boundary with a `PgPoolSource` implementation,
+- UUID, JSONB, decimal, date, time, timestamp, and timestamptz persistence,
+- schema-qualified tables and per-field select/insert/update permissions,
+- PostgreSQL defaults, generated fields, and write operations with `RETURNING`,
+- shared transactions and explicit primary/replica routing,
+- infrastructure-owned native named-query handlers,
 - shared CRUD and complete M1 query-contract coverage,
 - PostgreSQL integration tests for database and pool failures.
-
-Transactions and infrastructure-owned native named-query handlers are the next
-milestones.
 
 `PgSource` is intentionally PostgreSQL-specific. Routing between PostgreSQL,
 MongoDB, an HTTP service, or an entity cache belongs above adapters as a type
@@ -39,11 +42,12 @@ The default feature set enables PostgreSQL and Tokio with rustls/WebPKI TLS:
 
 ```toml
 [dependencies]
-soaprs-sqlx = "0.1"
+soaprs-sqlx = "0.2"
 ```
 
-Publication remains disabled until CI confirms the full
-`soaprs-contract-tests` suite against a real database.
+The `postgres-types` default feature enables SQLx support for UUID, chrono,
+JSON, and `rust_decimal` values. Disable default features when a smaller or
+different runtime/TLS composition is required.
 
 ## Repository construction
 
@@ -61,6 +65,58 @@ For the common case, `PgRepository::from_pool(pool, codec)` creates the same
 composition. A custom `PgSource` can select a pool, hold a transaction, add
 telemetry, or route PostgreSQL reads and writes without changing the repository
 or its consumers.
+
+## Entity mapping and values
+
+`PgEntityMapping` separates logical application fields from physical columns
+and controls which statements include each field:
+
+```rust,ignore
+let mapping = PgEntityMapping::in_schema("accounts", "users", "id")?
+    .with_immutable_field("id", "id", PgScalarKind::Uuid)?
+    .with_field("email", "email_address", PgScalarKind::Text)?
+    .with_field("profile", "profile", PgScalarKind::Json)?
+    .with_generated_field("created_at", "created_at", PgScalarKind::TimestampTz)?;
+```
+
+An infrastructure codec returns `PgValue`, while portable repository filters
+continue to use `ScalarValue`. `PgValue::Default` emits SQL `DEFAULT` without a
+binding. `insert_returning` and `replace_returning` decode database defaults,
+triggers, and generated columns back into an entity.
+
+## Transactions
+
+One transaction source can be injected into multiple repositories:
+
+```rust,ignore
+let transaction = PgTransactionSource::begin(&pool).await?;
+let source: Arc<dyn PgSource> = transaction.clone();
+
+let users = PgRepository::new(source.clone(), user_codec)?;
+let orders = PgRepository::new(source, order_codec)?;
+
+users.insert(user).await?;
+orders.insert(order).await?;
+transaction.commit().await?;
+```
+
+Operations are serialized on the transaction connection. After `commit` or
+`rollback`, the source rejects further work.
+
+## Native named queries
+
+Application query types remain SQL-free. Infrastructure implements
+`PgNativeQuerySpec<Q>` with trusted static SQL, typed bindings, and row decoding,
+then uses `PgNativeQueryHandler<Q>` as the application's `QueryHandler<Q>`.
+This covers joins, CTEs, window functions, aggregates, and projections without
+adding dedicated repository methods.
+
+## Primary and replicas
+
+`PgPrimaryReplicaSource` round-robins reads across configured replicas and sends
+`apply` plus write-`RETURNING` operations to the primary. It deliberately does
+not retry or fail over operations: retry belongs to an explicit policy that can
+account for idempotency and ambiguous write outcomes.
 
 ## Development
 
@@ -88,3 +144,5 @@ SOAPRS_POSTGRES_URL=postgres://soaprs:soaprs@localhost:5432/soaprs \
   decoding and scalar encoding.
 - `PgRepository` does not own a pool directly; connection selection, routing,
   transactions, and instrumentation belong behind `PgSource`.
+- Cache and routing across different technologies belong above adapters as
+  neutral repository decorators, not inside the PostgreSQL source contract.
