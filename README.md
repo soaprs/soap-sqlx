@@ -5,8 +5,9 @@
 and SQL text in infrastructure while application code depends on soaprs ports
 and named queries.
 
-The crate is published on crates.io. The `main` branch currently develops the
-breaking `0.2` PostgreSQL API after the initial `0.1` release.
+The crate is published on crates.io. Version `0.3` aligns the adapter with the
+`soaprs 0.3` contracts while preserving the PostgreSQL API introduced in
+`soaprs-sqlx 0.2`.
 
 ## Current scope
 
@@ -33,7 +34,7 @@ backend capabilities out of a lowest-common-denominator source interface.
 
 ## Compatibility
 
-- `soaprs` contracts: `0.1`
+- `soaprs` contracts: `0.3`
 - SQLx: `0.9`
 - Rust: `1.94` or newer, following the SQLx 0.9 MSRV
 - PostgreSQL: 13 or newer
@@ -42,7 +43,7 @@ The default feature set enables PostgreSQL and Tokio with rustls/WebPKI TLS:
 
 ```toml
 [dependencies]
-soaprs-sqlx = "0.2"
+soaprs-sqlx = "0.3"
 ```
 
 The `postgres-types` default feature enables SQLx support for UUID, chrono,
