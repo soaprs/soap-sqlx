@@ -1239,37 +1239,38 @@ dependencies = [
 
 [[package]]
 name = "soaprs-auth"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f28320d4ea59c41873fb94fa093442cf01f1b41767ce3119e5f3255e70dce2f"
+checksum = "0f359adde9bd9fc322967f6ac3099f91abe0cfad8cc4cf4b21218a5f52a13f84"
 dependencies = [
  "soaprs-core",
 ]
 
 [[package]]
 name = "soaprs-contract-tests"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98ab6a54820d5eaea5d1d875a7220024c3324221929d559e5ec95ff9dba44b0e"
+checksum = "a86202e8925e9a3c0890784d6aaf8f7f7794e4fc4a84c407c49f254e15af5fcb"
 dependencies = [
  "soaprs-auth",
  "soaprs-core",
  "soaprs-cqrs",
  "soaprs-events",
+ "soaprs-realtime",
  "soaprs-repository",
 ]
 
 [[package]]
 name = "soaprs-core"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75aabb9b9a29d1b68460b1f9dd63ee4dc2a8212d44cd046b1b35aa653d5124dc"
+checksum = "84bed378016b767e31177cb075962b7474c77a2e3d488a48d178014c7a88cff6"
 
 [[package]]
 name = "soaprs-cqrs"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61e2517251678ed1e08dd65d6a8eeafef1cca2433de4b153d70599b79309102f"
+checksum = "5b2aac73fac8cfeac2ff13a05d442f1ef03ef700118029ce99a3db1ee66eb15d"
 dependencies = [
  "soaprs-core",
  "soaprs-events",
@@ -1277,25 +1278,35 @@ dependencies = [
 
 [[package]]
 name = "soaprs-events"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b7792713f98c40bc06ec219b791e040b706e4f0545ad645d17cd640ddfe225d"
+checksum = "fd2ba33d0774658730984e0cccceecfc54521d013ef192d9dfaff5f59c9700dc"
 dependencies = [
  "soaprs-core",
 ]
 
 [[package]]
-name = "soaprs-repository"
-version = "0.3.0"
+name = "soaprs-realtime"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65ed86f6e1eaeded7690a38ed7d0622f1f655a9a6142fdfb000e2e26f24ca905"
+checksum = "ef3a85a50592716997469f6d6b37d4eaa36326e147c88693607e771571c9bf80"
+dependencies = [
+ "soaprs-auth",
+ "soaprs-core",
+]
+
+[[package]]
+name = "soaprs-repository"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f103ab9f60560a82849ab5beb927d4a87920506deea3649d378ed40da4eb4450"
 dependencies = [
  "soaprs-core",
 ]
 
 [[package]]
 name = "soaprs-sqlx"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "async-lock",
  "soaprs-contract-tests",

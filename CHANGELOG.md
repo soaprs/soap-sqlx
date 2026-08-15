@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-15
+
+### Changed
+
+- Updated `soaprs-core`, `soaprs-repository`, and shared contract-test
+  dependencies to `0.4`. The PostgreSQL adapter API remains source compatible
+  while its repository traits now share crate identity with `soaprs 0.4`
+  applications.
+
 ## [0.3.0] - 2026-08-14
 
 ### Changed
@@ -63,7 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI quality gates for formatting, Clippy, documentation, Rust 1.94 MSRV, and a
   PostgreSQL service.
 
-[Unreleased]: https://github.com/soaprs/soap-sqlx/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/soaprs/soap-sqlx/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/soaprs/soap-sqlx/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/soaprs/soap-sqlx/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/soaprs/soap-sqlx/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/soaprs/soap-sqlx/releases/tag/v0.1.0
