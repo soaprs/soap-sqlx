@@ -8,7 +8,7 @@ use sqlx::{Arguments, postgres::PgArguments};
 
 #[cfg(feature = "postgres-types")]
 use sqlx::types::{
-    Decimal, Json, JsonValue, Uuid,
+    BigDecimal, Json, JsonValue, Uuid,
     chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc},
 };
 
@@ -33,7 +33,7 @@ pub enum PgBindValue {
     Json(JsonValue),
     /// Native PostgreSQL arbitrary-precision numeric binding.
     #[cfg(feature = "postgres-types")]
-    Decimal(Decimal),
+    Decimal(BigDecimal),
     /// Native PostgreSQL date binding.
     #[cfg(feature = "postgres-types")]
     Date(NaiveDate),
@@ -458,7 +458,7 @@ pub(crate) fn normalize_entity_binding(
         #[cfg(feature = "postgres-types")]
         (PgScalarKind::Json, PgValue::Json(value)) => Ok(PgBindValue::Json(value.clone())),
         #[cfg(feature = "postgres-types")]
-        (PgScalarKind::Numeric, PgValue::Decimal(value)) => Ok(PgBindValue::Decimal(*value)),
+        (PgScalarKind::Numeric, PgValue::Decimal(value)) => Ok(PgBindValue::Decimal(value.clone())),
         #[cfg(feature = "postgres-types")]
         (PgScalarKind::Date, PgValue::Date(value)) => Ok(PgBindValue::Date(*value)),
         #[cfg(feature = "postgres-types")]

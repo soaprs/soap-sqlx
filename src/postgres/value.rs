@@ -3,7 +3,7 @@ use soaprs_repository::ScalarValue;
 
 #[cfg(feature = "postgres-types")]
 use sqlx::types::{
-    Decimal, JsonValue, Uuid,
+    BigDecimal, JsonValue, Uuid,
     chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc},
 };
 
@@ -34,7 +34,7 @@ pub enum PgValue {
     Json(JsonValue),
     /// PostgreSQL arbitrary-precision numeric value.
     #[cfg(feature = "postgres-types")]
-    Decimal(Decimal),
+    Decimal(BigDecimal),
     /// PostgreSQL `date` value.
     #[cfg(feature = "postgres-types")]
     Date(NaiveDate),
@@ -172,8 +172,8 @@ impl From<JsonValue> for PgValue {
 }
 
 #[cfg(feature = "postgres-types")]
-impl From<Decimal> for PgValue {
-    fn from(value: Decimal) -> Self {
+impl From<BigDecimal> for PgValue {
+    fn from(value: BigDecimal) -> Self {
         Self::Decimal(value)
     }
 }

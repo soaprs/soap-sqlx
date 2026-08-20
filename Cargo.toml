@@ -1,6 +1,6 @@
 [package]
 name = "soaprs-sqlx"
-version = "0.4.0"
+version = "0.6.0"
 edition = "2024"
 rust-version = "1.94"
 description = "SQLx database adapters for soaprs"
@@ -15,17 +15,17 @@ publish = true
 [features]
 default = ["postgres", "postgres-types", "runtime-tokio-rustls"]
 postgres = ["sqlx/postgres"]
-postgres-types = ["sqlx/chrono", "sqlx/json", "sqlx/rust_decimal", "sqlx/uuid"]
+postgres-types = ["sqlx/bigdecimal", "sqlx/chrono", "sqlx/json", "sqlx/uuid"]
 runtime-tokio-rustls = ["sqlx/runtime-tokio", "sqlx/tls-rustls-ring-webpki"]
 
 [dependencies]
 async-lock = "3"
-soaprs-core = "0.4.0"
-soaprs-repository = "0.4.0"
+soaprs-core = "0.6.0"
+soaprs-repository = "0.6.0"
 sqlx = { version = "0.9.0", default-features = false }
 
 [dev-dependencies]
-soaprs-contract-tests = "0.4.0"
+soaprs-contract-tests = "0.6.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [lints.rust]

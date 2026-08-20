@@ -2,7 +2,7 @@
 
 //! PostgreSQL contract tests run explicitly by the integration CI job.
 
-use std::{env, error::Error, sync::Arc, time::Duration};
+use std::{env, error::Error, str::FromStr, sync::Arc, time::Duration};
 
 use soaprs_contract_tests::{
     StandardQueryIds, standard_query_contract, verify_crud_contract, verify_query_contract,
@@ -20,7 +20,7 @@ use sqlx::{PgPool, Row, postgres::PgPoolOptions, postgres::PgRow};
 
 #[cfg(feature = "postgres-types")]
 use sqlx::types::{
-    Decimal, JsonValue, Uuid,
+    BigDecimal, JsonValue, Uuid,
     chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc},
 };
 
@@ -277,7 +277,7 @@ struct TypedRecord {
     id: Uuid,
     status: String,
     payload: JsonValue,
-    amount: Decimal,
+    amount: BigDecimal,
     business_date: NaiveDate,
     opens_at: NaiveTime,
     happened_at: NaiveDateTime,
@@ -342,7 +342,7 @@ impl PgEntityCodec<TypedRecord> for TypedRecordCodec {
             "status" if record.status.is_empty() => Ok(PgValue::Default),
             "status" => Ok(record.status.clone().into()),
             "payload" => Ok(record.payload.clone().into()),
-            "amount" => Ok(record.amount.into()),
+            "amount" => Ok(record.amount.clone().into()),
             "business_date" => Ok(record.business_date.into()),
             "opens_at" => Ok(record.opens_at.into()),
             "happened_at" => Ok(record.happened_at.into()),
@@ -400,7 +400,7 @@ async fn persists_native_types_defaults_and_returning_rows() -> Result<(), Box<d
         id: Uuid::parse_str("67e55044-10b1-426f-9247-bb680e5fe0c8")?,
         status: String::new(),
         payload: JsonValue::String("created".into()),
-        amount: Decimal::new(12345, 2),
+        amount: BigDecimal::from_str("79228162514264337593543950336.12345")?,
         business_date: NaiveDate::parse_from_str("2026-08-13", "%Y-%m-%d")?,
         opens_at: NaiveTime::parse_from_str("09:30:45", "%H:%M:%S")?,
         happened_at: NaiveDateTime::parse_from_str("2026-08-13 10:15:30", "%Y-%m-%d %H:%M:%S")?,
@@ -423,7 +423,7 @@ async fn persists_native_types_defaults_and_returning_rows() -> Result<(), Box<d
     let mut replacement = inserted.clone();
     replacement.status = "active".into();
     replacement.payload = JsonValue::String("replaced".into());
-    replacement.amount = Decimal::new(999, 1);
+    replacement.amount = BigDecimal::from_str("99.9")?;
     let replaced = repository.replace_returning(replacement.clone()).await?;
     assert_eq!(replaced, replacement);
 

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-20
+
+### Security
+
+- Replaced SQLx's `rust_decimal` integration with `bigdecimal`, removing the
+  vulnerable, unpatched `rkyv 0.7` series reported by `RUSTSEC-2026-0235` from
+  the package lockfile.
+- Added a scheduled RustSec dependency audit for every dependency change.
+
+### Changed
+
+- Updated `soaprs-core`, `soaprs-repository`, and shared contract-test
+  dependencies to `0.6`.
+- PostgreSQL `NUMERIC` values now use SQLx's arbitrary-precision `BigDecimal`
+  type instead of `rust_decimal::Decimal`.
+
 ## [0.4.0] - 2026-08-15
 
 ### Changed
@@ -72,7 +88,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI quality gates for formatting, Clippy, documentation, Rust 1.94 MSRV, and a
   PostgreSQL service.
 
-[Unreleased]: https://github.com/soaprs/soap-sqlx/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/soaprs/soap-sqlx/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/soaprs/soap-sqlx/compare/v0.4.0...v0.6.0
 [0.4.0]: https://github.com/soaprs/soap-sqlx/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/soaprs/soap-sqlx/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/soaprs/soap-sqlx/compare/v0.1.0...v0.2.0
